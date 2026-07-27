@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mein Leben - DB</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <style>
+        /* Kompaktere Abstände für große Bildschirme */
+        @media (min-width: 992px) {
+            main.container {
+                padding-top: 1rem;
+                padding-bottom: 1rem;
+            }
+            h2 {
+                margin-bottom: 0.75rem;
+            }
+            form {
+                margin-bottom: 0;
+            }
+        }
+
+        /* Umbruch statt Wischen: Buttons brechen bei Bedarf sauber in die nächste Zeile um */
+        .filter-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .filter-buttons button {
+            padding: 4px 10px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            width: auto;
+            margin: 0;
+        }
+
+        /* Detail-Akkordeon optisch verschönern */
+        details {
+            border: 1px solid #3b4b5c;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+        }
+        details summary {
+            font-weight: bold;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        details summary::-webkit-details-marker {
+            display: none;
+        }
+        .badge {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            background: #3b4b5c;
+            border-radius: 4px;
+            color: #ffffff;
+        }
+        
+        /* Aktions-Toolbar für jeden Eintrag */
+        .item-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            border-top: 1px dashed #3b4b5c;
+            padding-top: 10px;
+        }
+        .item-actions button {
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            margin: 0;
+            width: auto;
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        
+        <!-- Navigation / Tab-Leiste ganz oben -->
+        <nav style="margin-bottom: 1rem;">
+            <ul>
+                <li><strong>LifeBot</strong></li>
+            </ul>
+            <ul>
+                <li><a href="#" id="navWrite" aria-current="page" onclick="showTab('write')">➕ Eintragen</a></li>
+                <li><a href="#" id="navRead" onclick="showTab('read')">🔍 Finden</a></li>
+            </ul>
+        </nav>
+
+        <!-- BEREICH 1: EINTRAGEN (Auf Laptops zweispaltig) -->
+        <section id="writeSection">
+            <h2 id="formTitle">Neuer Eintrag</h2>
+            <form id="entryForm">
+                <div class="grid" style="margin-bottom: 0.5rem;">
+                    
+                    <!-- Linke Spalte auf Laptop / Oben auf Handy -->
+                    <div>
+                        <label for="title">Titel</label>
+                        <input type="text" id="title" placeholder="z. B. Steuererklärung" required>
+
+                        <label for="category">Kategorie</label>
+                        <select id="category">
+                            <option value="1">Aktuelle Pläne/Projekte</option>
+                            <option value="2">Lebensorganisation</option>
+                            <option value="3">Wissen & Hobbys</option>
+                            <option value="4">Erledigtes</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Rechte Spalte auf Laptop / Unten auf Handy -->
+                    <div>
+                        <label for="content">Notiz / Inhalt</label>
+                        <textarea id="content" style="height: 185px; margin-bottom: 0; resize: none;" placeholder="Hier unstrukturierte Gedanken eintragen..."></textarea>
+                    </div>
+
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 0.5rem;">
+                    <button type="submit" id="submitBtn" style="margin: 0;">Speichern</button>
+                    <button type="button" id="cancelBtn" class="secondary outline" style="margin: 0; display: none;" onclick="resetForm()">Abbrechen</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- BEREICH 2: SUCHEN & LESEN -->
+        <section id="readSection" style="display: none;">
+            <!-- Live-Suchfeld -->
+            <input type="search" id="searchInput" placeholder="Suche nach Titeln oder Inhalten..." oninput="renderEntries()">
+
+            <!-- Schnellfilter nach Kategorien -->
+            <div class="filter-buttons">
+                <button class="secondary" id="btnFilterAll" onclick="filterCategory(null)">Alle</button>
+                <button class="outline secondary" id="btnFilter1" onclick="filterCategory(1)">Pläne</button>
+                <button class="outline secondary" id="btnFilter2" onclick="filterCategory(2)">Organisation</button>
+                <button class="outline secondary" id="btnFilter3" onclick="filterCategory(3)">Wissen</button>
+                <button class="outline secondary" id="btnFilter4" onclick="filterCategory(4)">Erledigt</button>
+            </div>
+
+            <!-- Die kompakte Liste -->
+            <div id="entriesList">Lade Einträge...</div>
+        </section>
+
+    </main>
+
+    <script>
+        const form = document.getElementById('entryForm');
+        const list = document.getElementById('entriesList');
+        
+        let allItems = []; // Speichert alle geladenen Einträge lokal im Browser
+        let currentFilterCategory = null; // Aktuell ausgewählte Filter-Kategorie
+        let editingItemId = null; // ID des Eintrags, der gerade editiert wird (null = neuer Eintrag)
+
+        // Funktion: Zwischen den Tabs wechseln
+        function showTab(tabId) {
+            document.getElementById('writeSection').style.display = tabId === 'write' ? 'block' : 'none';
+            document.getElementById('readSection').style.display = tabId === 'read' ? 'block' : 'none';
+            
+            // Aktiv-Zustand in der Navigationsleiste anpassen
+            document.getElementById('navWrite').setAttribute('aria-current', tabId === 'write' ? 'page' : 'false');
+            document.getElementById('navRead').setAttribute('aria-current', tabId === 'read' ? 'page' : 'false');
+            
+            // Wenn man manuell auf "Eintragen" klickt und vorher im Editier-Modus war, setzen wir das Formular zurück
+            if (tabId === 'write' && !editingItemId) {
+                resetForm();
+            }
+
+            if (tabId === 'read') {
+                loadEntries(); // Aktualisieren, wenn man den Such-Tab öffnet
+            }
+        }
+
+        // Hilfsfunktion: Formular in den Normalzustand zurückversetzen
+        function resetForm() {
+            form.reset();
+            editingItemId = null;
+            document.getElementById('formTitle').innerText = 'Neuer Eintrag';
+            document.getElementById('submitBtn').innerText = 'Speichern';
+            document.getElementById('cancelBtn').style.display = 'none';
+        }
+
+        // Funktion: Kategorie-Filter umschalten
+        function filterCategory(categoryId) {
+            currentFilterCategory = categoryId;
+            
+            const buttons = {
+                null: document.getElementById('btnFilterAll'),
+                1: document.getElementById('btnFilter1'),
+                2: document.getElementById('btnFilter2'),
+                3: document.getElementById('btnFilter3'),
+                4: document.getElementById('btnFilter4')
+            };
+
+            for (const key in buttons) {
+                if (parseInt(key) === categoryId || (key === 'null' && categoryId === null)) {
+                    buttons[key].classList.remove('outline');
+                } else {
+                    buttons[key].classList.add('outline');
+                }
+            }
+
+            renderEntries();
+        }
+
+        // Funktion: Eintrag speichern (Erstellen ODER Bearbeiten)
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('title').value;
+            const category_id = parseInt(document.getElementById('category').value);
+            const content = document.getElementById('content').value;
+
+            let response;
+
+            if (editingItemId) {
+                // UPDATE (PUT) aufrufen
+                response = await fetch(`/api/items/${editingItemId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, category_id, content })
+                });
+            } else {
+                // CREATE (POST) aufrufen
+                response = await fetch('/api/items', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, category_id, content })
+                });
+            }
+
+            if (response.ok) {
+                resetForm();
+                showTab('read'); // Wechselt automatisch in die Liste
+            } else {
+                alert('Fehler beim Speichern');
+            }
+        });
+
+        // Funktion: Daten vom Server laden
+        async function loadEntries() {
+            try {
+                const response = await fetch('/api/items');
+                allItems = await response.json();
+                renderEntries();
+            } catch (err) {
+                list.innerHTML = '<p>Fehler beim Laden der Daten.</p>';
+            }
+        }
+
+        // Funktion: Einen Eintrag löschen
+        async function deleteItem(id) {
+            if (!confirm('Möchten Sie diesen Eintrag wirklich unwiderruflich löschen?')) return;
+
+            try {
+                const response = await fetch(`/api/items/${id}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    loadEntries(); // Liste neu laden
+                } else {
+                    alert('Fehler beim Löschen des Eintrags.');
+                }
+            } catch (err) {
+                alert('Netzwerkfehler beim Löschen.');
+            }
+        }
+
+        // Funktion: Einen Eintrag zum Bearbeiten vorbereiten
+        function editItem(id) {
+            // Findet das passende Element im lokalen Speicher
+            const item = allItems.find(i => i.id === id);
+            if (!item) return;
+
+            // Füllt das Formular aus
+            document.getElementById('title').value = item.title;
+            document.getElementById('category').value = item.category_id;
+            document.getElementById('content').value = item.content || '';
+
+            // Setzt den Editier-Modus aktiv
+            editingItemId = id;
+
+            // UI für das Editieren anpassen
+            document.getElementById('formTitle').innerText = 'Eintrag bearbeiten';
+            document.getElementById('submitBtn').innerText = 'Änderung speichern';
+            document.getElementById('cancelBtn').style.display = 'block';
+
+            // Tab wechseln
+            showTab('write');
+        }
+
+        // Funktion: Liste filtern und rendern
+        function renderEntries() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            
+            const filtered = allItems.filter(item => {
+                const matchesSearch = item.title.toLowerCase().includes(searchText) || 
+                                      (item.content && item.content.toLowerCase().includes(searchText));
+                const matchesCategory = currentFilterCategory ? item.category_id === currentFilterCategory : true;
+                return matchesSearch && matchesCategory;
+            });
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: gray;">Keine Einträge gefunden.</p>';
+                return;
+            }
+
+            // Rendern als ausklappbare Elemente mit Aktions-Toolbar
+            list.innerHTML = filtered.map(item => `
+                <details id="item-${item.id}">
+                    <summary>
+                        <span>${item.title}</span>
+                        <span class="badge">${item.category_name}</span>
+                    </summary>
+                    <p style="white-space: pre-wrap; margin-top: 10px; border-top: 1px solid #3b4b5c; padding-top: 10px; margin-bottom: 10px;">${item.content || 'Kein Inhalt'}</p>
+                    
+                    <!-- Aktionsleiste unten im aufgeklappten Element -->
+                    <div class="item-actions">
+                        <span style="font-size: 0.7rem; color: gray;">
+                            Erstellt am: ${new Date(item.created_at).toLocaleString('de-DE')}
+                        </span>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="outline" onclick="editItem(${item.id})">✏️ Bearbeiten</button>
+                            <button class="outline contrast" onclick="deleteItem(${item.id})">🗑️ Löschen</button>
+                        </div>
+                    </div>
+                </details>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
