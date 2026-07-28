@@ -16,6 +16,18 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ==========================================
+// HILFSFUNKTIONEN
+// ==========================================
+
+// Extrahiert die erste Zeile des Inhalts, kürzt sie auf max. 40 Zeichen und nutzt sie als Titel
+function generateTitleFromContent(content) {
+    if (!content || typeof content !== 'string') return 'Unbenannter Eintrag';
+    const firstLine = content.split('\n')[0].trim();
+    if (!firstLine) return 'Unbenannter Eintrag';
+    return firstLine.length > 40 ? firstLine.substring(0, 40) + '...' : firstLine;
+}
+
+// ==========================================
 // TELEGRAM BOT INTEGRATION
 // ==========================================
 
@@ -53,9 +65,8 @@ app.post('/api/telegram-webhook', async (req, res) => {
         }
 
         try {
-            // Titel aus der ersten Zeile generieren (maximal 40 Zeichen)
-            const firstLine = text.split('\n')[0];
-            const title = firstLine.length > 40 ? firstLine.substring(0, 40) + '...' : firstLine;
+            // Titel automatisch aus der ersten Zeile generieren
+            const title = generateTitleFromContent(text);
 
             // Eintrag in Supabase speichern (Kategorie null = Inbox)
             const { error } = await supabase
@@ -63,7 +74,7 @@ app.post('/api/telegram-webhook', async (req, res) => {
                 .insert([{
                     title: title,
                     content: text,
-                    category_id: null // Geändert von 1 auf null für die Inbox
+                    category_id: null // Standardmäßig in die Inbox
                 }]);
 
             if (error) throw error;
@@ -88,11 +99,16 @@ app.post('/api/telegram-webhook', async (req, res) => {
 app.post('/api/items', async (req, res) => {
     const { title, content, category_id } = req.body;
 
+    // Nutzen des übergebenen Titels, andernfalls automatische Generierung aus der 1. Zeile
+    const finalTitle = (title && String(title).trim() !== '') 
+        ? String(title) 
+        : generateTitleFromContent(content);
+
     try {
         const { data, error } = await supabase
             .from('items')
             .insert([{
-                title: title !== undefined ? String(title) : '',
+                title: finalTitle,
                 content: content !== undefined ? String(content) : '',
                 category_id: category_id ? Number(category_id) : null
             }])
@@ -120,8 +136,7 @@ app.get('/api/items', async (req, res) => {
 
         if (error) throw error;
 
-        // Das Resultat so umformen, wie das Frontend es erwartet.
-        // Falls categories null ist, kennzeichnen wir es als Inbox-Eintrag.
+        // Das Resultat so umformen, wie das Frontend es erwartet
         const formattedData = data.map(item => ({
             ...item,
             category_name: item.categories ? item.categories.name : '📥 Inbox'
@@ -145,8 +160,14 @@ app.put('/api/items/:id', async (req, res) => {
             updated_at: new Date().toISOString()
         };
 
-        if (title !== undefined) updateData.title = String(title);
         if (content !== undefined) updateData.content = String(content);
+        
+        // Titel neu generieren, wenn explizit ein leerer Titel übermittelt wird (beim Bearbeiten im Frontend)
+        if (title !== undefined) {
+            updateData.title = (String(title).trim() !== '') 
+                ? String(title) 
+                : generateTitleFromContent(content || '');
+        }
         
         // Explizite Unterscheidung von null und undefined, damit die Zuweisung zur Inbox (null) klappt
         if (category_id !== undefined) {
