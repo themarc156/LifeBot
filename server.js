@@ -57,19 +57,19 @@ app.post('/api/telegram-webhook', async (req, res) => {
             const firstLine = text.split('\n')[0];
             const title = firstLine.length > 40 ? firstLine.substring(0, 40) + '...' : firstLine;
 
-            // Eintrag in Supabase speichern (Kategorie 1 = Inbox/Pläne)
+            // Eintrag in Supabase speichern (Kategorie null = Inbox)
             const { error } = await supabase
                 .from('items')
                 .insert([{
                     title: title,
                     content: text,
-                    category_id: 1
+                    category_id: null // Geändert von 1 auf null für die Inbox
                 }]);
 
             if (error) throw error;
 
             // Erfolgsbestätigung an Telegram senden
-            await sendTelegramMessage(chatId, "📥 Erfolgreich im LifeBot gespeichert!");
+            await sendTelegramMessage(chatId, "📥 Erfolgreich in der Inbox gespeichert!");
         } catch (err) {
             console.error("Fehler im Telegram-Webhook:", err.message);
             await sendTelegramMessage(chatId, "❌ Fehler beim Speichern im LifeBot.");
@@ -120,10 +120,11 @@ app.get('/api/items', async (req, res) => {
 
         if (error) throw error;
 
-        // Das Resultat so umformen, wie das Frontend es erwartet
+        // Das Resultat so umformen, wie das Frontend es erwartet.
+        // Falls categories null ist, kennzeichnen wir es als Inbox-Eintrag.
         const formattedData = data.map(item => ({
             ...item,
-            category_name: item.categories ? item.categories.name : 'Unbekannt'
+            category_name: item.categories ? item.categories.name : '📥 Inbox'
         }));
 
         res.json(formattedData);
@@ -146,7 +147,11 @@ app.put('/api/items/:id', async (req, res) => {
 
         if (title !== undefined) updateData.title = String(title);
         if (content !== undefined) updateData.content = String(content);
-        if (category_id !== undefined) updateData.category_id = Number(category_id);
+        
+        // Explizite Unterscheidung von null und undefined, damit die Zuweisung zur Inbox (null) klappt
+        if (category_id !== undefined) {
+            updateData.category_id = category_id !== null ? Number(category_id) : null;
+        }
 
         const { error } = await supabase
             .from('items')
