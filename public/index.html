@@ -20,7 +20,7 @@
                 padding-top: 1rem;
                 padding-bottom: 1rem;
             }
-            h2 {
+            h4 {
                 margin-bottom: 0.75rem;
             }
             form {
@@ -139,14 +139,14 @@
 <body>
     <main class="container">
         
-        <!-- Header (Ohne störende Tabs) -->
+        <!-- Header (Ohne ablenkende Navigationstabs) -->
         <nav style="margin-bottom: 1rem;">
             <ul>
                 <li><strong>LifeBot 🤖</strong></li>
             </ul>
         </nav>
 
-        <!-- DYNAMISCHES INBOX KARUSSELL BANNER (Erscheint nur wenn Einträge vorhanden) -->
+        <!-- DYNAMISCHES INBOX KARUSSELL BANNER -->
         <section id="inboxCollapseSection" style="display: none; border: 2px solid #00895b; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; background-color: #1a232a;">
             <div style="font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;" onclick="toggleInboxCarousel()">
                 <span>📥 Inbox aufräumen (<span id="inboxCountText">0</span>)</span>
@@ -167,10 +167,8 @@
                     <span style="font-size: 0.8rem; color: gray; display: block; margin-bottom: 0.25rem;">Kategorie zuweisen (Optional):</span>
                     <div class="category-chips">
                         <button type="button" class="outline secondary" data-val="inbox" onclick="selectFormCategory(null)">📥 Inbox</button>
-                        <button type="button" class="outline secondary" data-val="1" onclick="selectFormCategory(1)">Pläne</button>
-                        <button type="button" class="outline secondary" data-val="2" onclick="selectFormCategory(2)">Organisation</button>
-                        <button type="button" class="outline secondary" data-val="3" onclick="selectFormCategory(3)">Wissen</button>
-                        <button type="button" class="outline secondary" data-val="4" onclick="selectFormCategory(4)">Erledigt</button>
+                        <button type="button" class="outline secondary" data-val="1" onclick="selectFormCategory(1)">⚡ Aktiv</button>
+                        <button type="button" class="outline secondary" data-val="2" onclick="selectFormCategory(2)">🧠 Merken</button>
                     </div>
                 </div>
 
@@ -192,10 +190,8 @@
             <div class="filter-buttons">
                 <button class="secondary" id="btnFilterAll" onclick="filterCategory(null)">Alle</button>
                 <button class="outline secondary" id="btnFilterInbox" onclick="filterCategory('inbox')">Inbox</button>
-                <button class="outline secondary" id="btnFilter1" onclick="filterCategory(1)">Pläne</button>
-                <button class="outline secondary" id="btnFilter2" onclick="filterCategory(2)">Organisation</button>
-                <button class="outline secondary" id="btnFilter3" onclick="filterCategory(3)">Wissen</button>
-                <button class="outline secondary" id="btnFilter4" onclick="filterCategory(4)">Erledigt</button>
+                <button class="outline secondary" id="btnFilter1" onclick="filterCategory(1)">Aktiv</button>
+                <button class="outline secondary" id="btnFilter2" onclick="filterCategory(2)">Merken</button>
             </div>
 
             <!-- Die kompakte Feed-Liste -->
@@ -250,9 +246,7 @@
                 'all': 'btnFilterAll',
                 'inbox': 'btnFilterInbox',
                 1: 'btnFilter1',
-                2: 'btnFilter2',
-                3: 'btnFilter3',
-                4: 'btnFilter4'
+                2: 'btnFilter2'
             };
 
             let activeKey = 'all';
@@ -314,7 +308,7 @@
                 const response = await fetch('/api/items');
                 allItems = await response.json();
                 
-                // Filtern nach Inbox-Einträgen (category_id ist null)
+                // Filtern nach echten Inbox-Einträgen (category_id ist null)
                 inboxItems = allItems.filter(item => item.category_id === null || item.category_id === undefined);
                 
                 // Banner steuern
@@ -380,10 +374,8 @@
 
                 <p style="font-size: 0.85rem; margin-bottom: 0.5rem; text-align: center;">Schnell-Einsortieren:</p>
                 <div class="inbox-actions">
-                    <button onclick="quickAssignCategory(${item.id}, 1)" class="secondary">Pläne</button>
-                    <button onclick="quickAssignCategory(${item.id}, 2)" class="secondary">Organisation</button>
-                    <button onclick="quickAssignCategory(${item.id}, 3)" class="secondary">Wissen/Hobby</button>
-                    <button onclick="quickAssignCategory(${item.id}, 4)" class="contrast">✅ Erledigt</button>
+                    <button onclick="quickAssignCategory(${item.id}, 1)" class="secondary">⚡ Aktiv</button>
+                    <button onclick="quickAssignCategory(${item.id}, 2)" class="secondary">🧠 Merken</button>
                     <button onclick="deleteItem(${item.id}, true)" class="outline contrast">🗑️ Löschen</button>
                 </div>
             `;
@@ -408,7 +400,7 @@
                 const response = await fetch(`/api/items/${itemId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title: "", category_id: newCategoryId }) // Titel wird bei Bedarf neu generiert
+                    body: JSON.stringify({ title: "", category_id: newCategoryId })
                 });
 
                 if (response.ok) {
@@ -460,7 +452,7 @@
             document.getElementById('submitBtn').innerText = 'Änderungen speichern';
             document.getElementById('cancelBtn').style.display = 'block';
 
-            // Sanft nach oben zum Formular scrollen
+            // Sanft nach oben scrollen
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
