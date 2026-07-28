@@ -84,43 +84,6 @@
             margin: 0;
             width: auto;
         }
-
-        /* INBOX KARUSSELL STYLES (Variante B) */
-        .inbox-card {
-            border: 2px solid #00895b;
-            border-radius: 8px;
-            padding: 1rem;
-            background-color: #1a232a;
-            margin-bottom: 1rem;
-            min-height: 180px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        .inbox-nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        .inbox-nav button {
-            width: auto;
-            margin: 0;
-            padding: 4px 12px;
-            font-size: 0.85rem;
-        }
-        .inbox-actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-            gap: 8px;
-            margin-top: 1rem;
-        }
-        .inbox-actions button {
-            margin: 0;
-            padding: 8px;
-            font-size: 0.8rem;
-            text-align: center;
-        }
     </style>
 </head>
 <body>
@@ -132,22 +95,12 @@
                 <li><strong>LifeBot</strong></li>
             </ul>
             <ul>
-                <li><a href="#" id="navInbox" onclick="showTab('inbox')">📥 Inbox (<span id="inboxBadgeCount">0</span>)</a></li>
                 <li><a href="#" id="navWrite" aria-current="page" onclick="showTab('write')">➕ Eintragen</a></li>
                 <li><a href="#" id="navRead" onclick="showTab('read')">🔍 Finden</a></li>
             </ul>
         </nav>
 
-        <!-- BEREICH 0: INBOX CLEANING (Variante B) -->
-        <section id="inboxSection" style="display: none;">
-            <h2>📥 Inbox aufräumen</h2>
-            
-            <div id="inboxContent">
-                <!-- Wird dynamisch befüllt -->
-            </div>
-        </section>
-
-        <!-- BEREICH 1: EINTRAGEN (Auf Laptops zweispaltig) -->
+        <!-- BEREICH 1: EINTRAGEN -->
         <section id="writeSection">
             <h2 id="formTitle">Neuer Eintrag</h2>
             <form id="entryForm">
@@ -160,7 +113,8 @@
 
                         <label for="category">Kategorie</label>
                         <select id="category">
-                            <option value="1">Aktuelle Pläne/Projekte (Inbox)</option>
+                            <option value="">📥 Inbox (Noch einsortieren)</option>
+                            <option value="1">Aktuelle Pläne/Projekte</option>
                             <option value="2">Lebensorganisation</option>
                             <option value="3">Wissen & Hobbys</option>
                             <option value="4">Erledigtes</option>
@@ -190,7 +144,8 @@
             <!-- Schnellfilter nach Kategorien -->
             <div class="filter-buttons">
                 <button class="secondary" id="btnFilterAll" onclick="filterCategory(null)">Alle</button>
-                <button class="outline secondary" id="btnFilter1" onclick="filterCategory(1)">Inbox / Pläne</button>
+                <button class="outline secondary" id="btnFilterInbox" onclick="filterCategory('inbox')">Inbox</button>
+                <button class="outline secondary" id="btnFilter1" onclick="filterCategory(1)">Pläne</button>
                 <button class="outline secondary" id="btnFilter2" onclick="filterCategory(2)">Organisation</button>
                 <button class="outline secondary" id="btnFilter3" onclick="filterCategory(3)">Wissen</button>
                 <button class="outline secondary" id="btnFilter4" onclick="filterCategory(4)">Erledigt</button>
@@ -207,28 +162,25 @@
         const list = document.getElementById('entriesList');
         
         let allItems = []; // Speichert alle geladenen Einträge lokal im Browser
-        let inboxItems = []; // Speichert nur die unsortierten Inbox-Einträge
-        let currentInboxIndex = 0; // Aktueller Index im Karussell
-        let currentFilterCategory = null; // Aktuell ausgewählte Filter-Kategorie
+        let currentFilterCategory = null; // Aktuell ausgewählte Filter-Kategorie (null, 'inbox' oder ID)
         let editingItemId = null; // ID des Eintrags, der gerade editiert wird (null = neuer Eintrag)
 
         // Funktion: Zwischen den Tabs wechseln
         function showTab(tabId) {
-            document.getElementById('inboxSection').style.display = tabId === 'inbox' ? 'block' : 'none';
             document.getElementById('writeSection').style.display = tabId === 'write' ? 'block' : 'none';
             document.getElementById('readSection').style.display = tabId === 'read' ? 'block' : 'none';
             
             // Aktiv-Zustand in der Navigationsleiste anpassen
-            document.getElementById('navInbox').setAttribute('aria-current', tabId === 'inbox' ? 'page' : 'false');
             document.getElementById('navWrite').setAttribute('aria-current', tabId === 'write' ? 'page' : 'false');
             document.getElementById('navRead').setAttribute('aria-current', tabId === 'read' ? 'page' : 'false');
             
+            // Wenn man manuell auf "Eintragen" klickt und vorher im Editier-Modus war, setzen wir das Formular zurück
             if (tabId === 'write' && !editingItemId) {
                 resetForm();
             }
 
-            if (tabId === 'read' || tabId === 'inbox') {
-                loadEntries(); // Aktualisieren beim Tab-Wechsel
+            if (tabId === 'read') {
+                loadEntries(); // Aktualisieren, wenn man den Such-Tab öffnet
             }
         }
 
@@ -241,23 +193,34 @@
             document.getElementById('cancelBtn').style.display = 'none';
         }
 
-        // Funktion: Kategorie-Filter umschalten (im Finden-Tab)
+        // Funktion: Kategorie-Filter umschalten
         function filterCategory(categoryId) {
             currentFilterCategory = categoryId;
             
-            const buttons = {
-                null: document.getElementById('btnFilterAll'),
-                1: document.getElementById('btnFilter1'),
-                2: document.getElementById('btnFilter2'),
-                3: document.getElementById('btnFilter3'),
-                4: document.getElementById('btnFilter4')
+            const buttonIds = {
+                'all': 'btnFilterAll',
+                'inbox': 'btnFilterInbox',
+                1: 'btnFilter1',
+                2: 'btnFilter2',
+                3: 'btnFilter3',
+                4: 'btnFilter4'
             };
 
-            for (const key in buttons) {
-                if (parseInt(key) === categoryId || (key === 'null' && categoryId === null)) {
-                    buttons[key].classList.remove('outline');
-                } else {
-                    buttons[key].classList.add('outline');
+            let activeKey = 'all';
+            if (categoryId === 'inbox') {
+                activeKey = 'inbox';
+            } else if (categoryId !== null) {
+                activeKey = categoryId;
+            }
+
+            for (const key in buttonIds) {
+                const btn = document.getElementById(buttonIds[key]);
+                if (btn) {
+                    if (key == activeKey) {
+                        btn.classList.remove('outline');
+                    } else {
+                        btn.classList.add('outline');
+                    }
                 }
             }
 
@@ -268,18 +231,22 @@
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const title = document.getElementById('title').value;
-            const category_id = parseInt(document.getElementById('category').value);
+            const categoryValue = document.getElementById('category').value;
+            // Falls "Inbox" ausgewählt ist (leerer String), senden wir null
+            const category_id = categoryValue ? parseInt(categoryValue) : null;
             const content = document.getElementById('content').value;
 
             let response;
 
             if (editingItemId) {
+                // UPDATE (PUT) aufrufen
                 response = await fetch(`/api/items/${editingItemId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title, category_id, content })
                 });
             } else {
+                // CREATE (POST) aufrufen
                 response = await fetch('/api/items', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -289,7 +256,7 @@
 
             if (response.ok) {
                 resetForm();
-                showTab('read');
+                showTab('read'); // Wechselt automatisch in die Liste
             } else {
                 alert('Fehler beim Speichern');
             }
@@ -300,105 +267,13 @@
             try {
                 const response = await fetch('/api/items');
                 allItems = await response.json();
-                
-                // Filtern nach Inbox-Items (Kategorie 1)
-                inboxItems = allItems.filter(item => item.category_id === 1);
-                document.getElementById('inboxBadgeCount').innerText = inboxItems.length;
-
                 renderEntries();
-                renderInboxCarousel();
             } catch (err) {
                 list.innerHTML = '<p>Fehler beim Laden der Daten.</p>';
             }
         }
 
-        // ==========================================
-        // INBOX KARUSSELL LOGIK (Variante B)
-        // ==========================================
-
-        function renderInboxCarousel() {
-            const container = document.getElementById('inboxContent');
-
-            if (inboxItems.length === 0) {
-                container.innerHTML = `
-                    <article style="text-align: center; padding: 2rem;">
-                        <h3>🎉 Inbox vollkommen leer!</h3>
-                        <p style="color: gray;">Alle Notizen & Telegram-Nachrichten sind einsortiert.</p>
-                    </article>
-                `;
-                return;
-            }
-
-            if (currentInboxIndex >= inboxItems.length) {
-                currentInboxIndex = Math.max(0, inboxItems.length - 1);
-            }
-
-            const item = inboxItems[currentInboxIndex];
-
-            container.innerHTML = `
-                <div class="inbox-nav">
-                    <button class="outline secondary" onclick="prevInboxCard()" ${currentInboxIndex === 0 ? 'disabled' : ''}>◀ Vorherige</button>
-                    <span style="font-size: 0.85rem; color: gray;">Eintrag ${currentInboxIndex + 1} von ${inboxItems.length}</span>
-                    <button class="outline secondary" onclick="nextInboxCard()" ${currentInboxIndex === inboxItems.length - 1 ? 'disabled' : ''}>Nächste ▶</button>
-                </div>
-
-                <div class="inbox-card">
-                    <div>
-                        <h3 style="margin-bottom: 0.5rem;">${item.title || 'Ohne Titel'}</h3>
-                        <p style="white-space: pre-wrap; font-size: 0.95rem; margin-bottom: 0;">${item.content || 'Kein Inhalt vorhanden'}</p>
-                    </div>
-                    <div style="font-size: 0.75rem; color: gray; margin-top: 1rem; text-align: right;">
-                        Empfangen: ${new Date(item.created_at).toLocaleString('de-DE')}
-                    </div>
-                </div>
-
-                <p style="font-size: 0.85rem; margin-bottom: 0.5rem; text-align: center;">Einsortieren in Kategorie:</p>
-                <div class="inbox-actions">
-                    <button onclick="quickAssignCategory(${item.id}, 2)" class="secondary">Organisation</button>
-                    <button onclick="quickAssignCategory(${item.id}, 3)" class="secondary">Wissen/Hobby</button>
-                    <button onclick="quickAssignCategory(${item.id}, 4)" class="contrast">✅ Erledigt</button>
-                    <button onclick="deleteItem(${item.id})" class="outline contrast">🗑️ Löschen</button>
-                </div>
-            `;
-        }
-
-        function nextInboxCard() {
-            if (currentInboxIndex < inboxItems.length - 1) {
-                currentInboxIndex++;
-                renderInboxCarousel();
-            }
-        }
-
-        function prevInboxCard() {
-            if (currentInboxIndex > 0) {
-                currentInboxIndex--;
-                renderInboxCarousel();
-            }
-        }
-
-        // Schnell-Zuweisung aus dem Karussell
-        async function quickAssignCategory(itemId, newCategoryId) {
-            try {
-                const response = await fetch(`/api/items/${itemId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ category_id: newCategoryId })
-                });
-
-                if (response.ok) {
-                    loadEntries(); // Neu laden und UI aktualisieren
-                } else {
-                    alert('Fehler beim Zuweisen der Kategorie.');
-                }
-            } catch (err) {
-                alert('Netzwerkfehler.');
-            }
-        }
-
-        // ==========================================
-        // LISTE & EDITIEREN
-        // ==========================================
-
+        // Funktion: Einen Eintrag löschen
         async function deleteItem(id) {
             if (!confirm('Möchten Sie diesen Eintrag wirklich unwiderruflich löschen?')) return;
 
@@ -407,7 +282,7 @@
                     method: 'DELETE'
                 });
                 if (response.ok) {
-                    loadEntries();
+                    loadEntries(); // Liste neu laden
                 } else {
                     alert('Fehler beim Löschen des Eintrags.');
                 }
@@ -416,30 +291,45 @@
             }
         }
 
+        // Funktion: Einen Eintrag zum Bearbeiten vorbereiten
         function editItem(id) {
+            // Findet das passende Element im lokalen Speicher
             const item = allItems.find(i => i.id === id);
             if (!item) return;
 
+            // Füllt das Formular aus
             document.getElementById('title').value = item.title;
-            document.getElementById('category').value = item.category_id;
+            document.getElementById('category').value = item.category_id !== null ? item.category_id : '';
             document.getElementById('content').value = item.content || '';
 
+            // Setzt den Editier-Modus aktiv
             editingItemId = id;
 
+            // UI für das Editieren anpassen
             document.getElementById('formTitle').innerText = 'Eintrag bearbeiten';
             document.getElementById('submitBtn').innerText = 'Änderung speichern';
             document.getElementById('cancelBtn').style.display = 'block';
 
+            // Tab wechseln
             showTab('write');
         }
 
+        // Funktion: Liste filtern und rendern
         function renderEntries() {
             const searchText = document.getElementById('searchInput').value.toLowerCase();
             
             const filtered = allItems.filter(item => {
                 const matchesSearch = item.title.toLowerCase().includes(searchText) || 
                                       (item.content && item.content.toLowerCase().includes(searchText));
-                const matchesCategory = currentFilterCategory ? item.category_id === currentFilterCategory : true;
+                
+                let matchesCategory = true;
+                if (currentFilterCategory === 'inbox') {
+                    // Filtert nach Einträgen, die keine Kategorie zugewiesen haben
+                    matchesCategory = (item.category_id === null || item.category_id === undefined);
+                } else if (currentFilterCategory !== null) {
+                    matchesCategory = item.category_id === currentFilterCategory;
+                }
+                
                 return matchesSearch && matchesCategory;
             });
 
@@ -448,6 +338,7 @@
                 return;
             }
 
+            // Rendern als ausklappbare Elemente mit Aktions-Toolbar
             list.innerHTML = filtered.map(item => `
                 <details id="item-${item.id}">
                     <summary>
@@ -456,6 +347,7 @@
                     </summary>
                     <p style="white-space: pre-wrap; margin-top: 10px; border-top: 1px solid #3b4b5c; padding-top: 10px; margin-bottom: 10px;">${item.content || 'Kein Inhalt'}</p>
                     
+                    <!-- Aktionsleiste unten im aufgeklappten Element -->
                     <div class="item-actions">
                         <span style="font-size: 0.7rem; color: gray;">
                             Erstellt am: ${new Date(item.created_at).toLocaleString('de-DE')}
@@ -468,9 +360,6 @@
                 </details>
             `).join('');
         }
-
-        // Beim Starten direkt einmal laden
-        loadEntries();
     </script>
 </body>
 </html>
