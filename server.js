@@ -139,14 +139,18 @@ app.put('/api/items/:id', async (req, res) => {
     const { title, content, category_id } = req.body;
 
     try {
+        // Objekt dynamisch aufbauen – nur übergeben, was auch mitgeschickt wurde
+        const updateData = {
+            updated_at: new Date().toISOString()
+        };
+
+        if (title !== undefined) updateData.title = String(title);
+        if (content !== undefined) updateData.content = String(content);
+        if (category_id !== undefined) updateData.category_id = Number(category_id);
+
         const { error } = await supabase
             .from('items')
-            .update({
-                title: title !== undefined ? String(title) : '',
-                content: content !== undefined ? String(content) : '',
-                category_id: category_id ? Number(category_id) : null,
-                updated_at: new Date().toISOString()
-            })
+            .update(updateData)
             .eq('id', Number(id));
 
         if (error) throw error;
