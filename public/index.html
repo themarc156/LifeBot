@@ -414,22 +414,23 @@
         }
 
         async function quickAssignCategory(itemId, newCategoryId) {
-            try {
-                const response = await fetch(`/api/items/${itemId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title: "", category_id: newCategoryId })
-                });
+    try {
+        const response = await fetch(`/api/items/${itemId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            // Senden Sie hier nur die category_id, damit der Titel unberührt bleibt:
+            body: JSON.stringify({ category_id: newCategoryId })
+        });
 
-                if (response.ok) {
-                    loadEntries();
-                } else {
-                    alert('Fehler beim Einsortieren.');
-                }
-            } catch (err) {
-                alert('Netzwerkfehler.');
-            }
+        if (response.ok) {
+            loadEntries();
+        } else {
+            alert('Fehler beim Einsortieren.');
         }
+    } catch (err) {
+        alert('Netzwerkfehler.');
+    }
+}
 
         // ==========================================
         // EDITIEREN & LÖSCHEN
