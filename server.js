@@ -108,6 +108,11 @@ app.delete('/api/items/:id', async (req, res) => {
     }
 });
 
+// Ping-Endpunkt für Cron-Jobs / Keep-Alive
+app.get('/api/ping', (req, res) => {
+    res.status(200).send('pong');
+});
+
 // Server starten
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server läuft auf Port ${PORT}`);
