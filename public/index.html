@@ -85,6 +85,19 @@
             width: auto;
         }
 
+        /* CATEGORY QUICK-CHIPS */
+        .category-chips {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .category-chips button {
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            width: auto;
+            margin: 0;
+        }
+
         /* INBOX KARUSSELL STYLES */
         .inbox-card {
             border: 2px solid #00895b;
@@ -92,7 +105,7 @@
             padding: 1rem;
             background-color: #1a232a;
             margin-bottom: 1rem;
-            min-height: 180px;
+            min-height: 140px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -111,7 +124,7 @@
         }
         .inbox-actions {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
             gap: 8px;
             margin-top: 1rem;
         }
@@ -126,66 +139,54 @@
 <body>
     <main class="container">
         
-        <!-- Navigation / Tab-Leiste ganz oben -->
+        <!-- Header (Ohne störende Tabs) -->
         <nav style="margin-bottom: 1rem;">
             <ul>
-                <li><strong>LifeBot</strong></li>
-            </ul>
-            <ul>
-                <li><a href="#" id="navInbox" onclick="showTab('inbox')">📥 Inbox (<span id="inboxBadgeCount">0</span>)</a></li>
-                <li><a href="#" id="navWrite" aria-current="page" onclick="showTab('write')">➕ Eintragen</a></li>
-                <li><a href="#" id="navRead" onclick="showTab('read')">🔍 Finden</a></li>
+                <li><strong>LifeBot 🤖</strong></li>
             </ul>
         </nav>
 
-        <!-- BEREICH 0: INBOX CLEANING -->
-        <section id="inboxSection" style="display: none;">
-            <h2>📥 Inbox aufräumen</h2>
-            <div id="inboxContent">
+        <!-- DYNAMISCHES INBOX KARUSSELL BANNER (Erscheint nur wenn Einträge vorhanden) -->
+        <section id="inboxCollapseSection" style="display: none; border: 2px solid #00895b; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; background-color: #1a232a;">
+            <div style="font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;" onclick="toggleInboxCarousel()">
+                <span>📥 Inbox aufräumen (<span id="inboxCountText">0</span>)</span>
+                <span id="inboxToggleArrow" style="font-size: 1.2rem;">▲</span>
+            </div>
+            <div id="inboxCarouselWrapper">
                 <!-- Wird dynamisch befüllt -->
             </div>
         </section>
 
-        <!-- BEREICH 1: EINTRAGEN -->
-        <section id="writeSection">
-            <h2 id="formTitle">Neuer Eintrag</h2>
+        <!-- EINTRAGEN-BEREICH (Quick-Add) -->
+        <section id="writeSection" style="margin-bottom: 2rem;">
+            <h4 id="formTitle" style="margin-bottom: 0.5rem;">Gedanke festhalten</h4>
             <form id="entryForm">
-                <div class="grid" style="margin-bottom: 0.5rem;">
-                    
-                    <!-- Linke Spalte auf Laptop / Oben auf Handy -->
-                    <div>
-                        <label for="title">Titel</label>
-                        <input type="text" id="title" placeholder="z. B. Steuererklärung" required>
-
-                        <label for="category">Kategorie</label>
-                        <select id="category">
-                            <option value="">📥 Inbox (Noch einsortieren)</option>
-                            <option value="1">Aktuelle Pläne/Projekte</option>
-                            <option value="2">Lebensorganisation</option>
-                            <option value="3">Wissen & Hobbys</option>
-                            <option value="4">Erledigtes</option>
-                        </select>
+                <textarea id="content" style="height: 110px; margin-bottom: 0.75rem; resize: none;" placeholder="Hier unstrukturierte Gedanken eintragen... (Erste Zeile wird automatisch zum Titel)" required></textarea>
+                
+                <div style="margin-bottom: 1rem;">
+                    <span style="font-size: 0.8rem; color: gray; display: block; margin-bottom: 0.25rem;">Kategorie zuweisen (Optional):</span>
+                    <div class="category-chips">
+                        <button type="button" class="outline secondary" data-val="inbox" onclick="selectFormCategory(null)">📥 Inbox</button>
+                        <button type="button" class="outline secondary" data-val="1" onclick="selectFormCategory(1)">Pläne</button>
+                        <button type="button" class="outline secondary" data-val="2" onclick="selectFormCategory(2)">Organisation</button>
+                        <button type="button" class="outline secondary" data-val="3" onclick="selectFormCategory(3)">Wissen</button>
+                        <button type="button" class="outline secondary" data-val="4" onclick="selectFormCategory(4)">Erledigt</button>
                     </div>
-                    
-                    <!-- Rechte Spalte auf Laptop / Unten auf Handy -->
-                    <div>
-                        <label for="content">Notiz / Inhalt</label>
-                        <textarea id="content" style="height: 185px; margin-bottom: 0; resize: none;" placeholder="Hier unstrukturierte Gedanken eintragen..."></textarea>
-                    </div>
-
                 </div>
 
-                <div style="display: flex; gap: 10px; margin-top: 0.5rem;">
-                    <button type="submit" id="submitBtn" style="margin: 0;">Speichern</button>
-                    <button type="button" id="cancelBtn" class="secondary outline" style="margin: 0; display: none;" onclick="resetForm()">Abbrechen</button>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" id="submitBtn" style="margin: 0; width: auto;">Festhalten</button>
+                    <button type="button" id="cancelBtn" class="secondary outline" style="margin: 0; display: none; width: auto;" onclick="resetForm()">Abbrechen</button>
                 </div>
             </form>
         </section>
 
-        <!-- BEREICH 2: SUCHEN & LESEN -->
-        <section id="readSection" style="display: none;">
+        <!-- SUCHEN & FEED-BEREICH -->
+        <section id="readSection" style="border-top: 1px solid #3b4b5c; padding-top: 1.5rem;">
+            <h4 style="margin-bottom: 0.5rem;">🔍 Suchen & Finden</h4>
+            
             <!-- Live-Suchfeld -->
-            <input type="search" id="searchInput" placeholder="Suche nach Titeln oder Inhalten..." oninput="renderEntries()">
+            <input type="search" id="searchInput" placeholder="Suche nach Inhalten..." oninput="renderEntries()">
 
             <!-- Schnellfilter nach Kategorien -->
             <div class="filter-buttons">
@@ -197,7 +198,7 @@
                 <button class="outline secondary" id="btnFilter4" onclick="filterCategory(4)">Erledigt</button>
             </div>
 
-            <!-- Die kompakte Liste -->
+            <!-- Die kompakte Feed-Liste -->
             <div id="entriesList">Lade Einträge...</div>
         </section>
 
@@ -207,42 +208,41 @@
         const form = document.getElementById('entryForm');
         const list = document.getElementById('entriesList');
         
-        let allItems = []; // Speichert alle geladenen Einträge lokal im Browser
-        let inboxItems = []; // Speichert nur die unsortierten Inbox-Einträge (category_id === null)
+        let allItems = []; // Alle Einträge aus der DB
+        let inboxItems = []; // Nur unsortierte Inbox-Einträge
         let currentInboxIndex = 0; // Aktueller Index im Karussell
-        let currentFilterCategory = null; // Aktuell ausgewählte Filter-Kategorie im "Finden"-Tab
-        let editingItemId = null; // ID des Eintrags, der gerade editiert wird (null = neuer Eintrag)
+        let currentFilterCategory = null; // Filter im Suchen-Bereich
+        
+        let selectedFormCategoryId = null; // Ausgewählte Kategorie im Quick-Add-Formular (null = Inbox)
+        let editingItemId = null; // ID des Eintrags im Bearbeitungsmodus
+        let showInboxCarousel = true; // Karussell standardmäßig ausgeklappt, wenn Einträge da sind
 
-        // Funktion: Zwischen den Tabs wechseln
-        function showTab(tabId) {
-            document.getElementById('inboxSection').style.display = tabId === 'inbox' ? 'block' : 'none';
-            document.getElementById('writeSection').style.display = tabId === 'write' ? 'block' : 'none';
-            document.getElementById('readSection').style.display = tabId === 'read' ? 'block' : 'none';
-            
-            // Aktiv-Zustand in der Navigationsleiste anpassen
-            document.getElementById('navInbox').setAttribute('aria-current', tabId === 'inbox' ? 'page' : 'false');
-            document.getElementById('navWrite').setAttribute('aria-current', tabId === 'write' ? 'page' : 'false');
-            document.getElementById('navRead').setAttribute('aria-current', tabId === 'read' ? 'page' : 'false');
-            
-            if (tabId === 'write' && !editingItemId) {
-                resetForm();
-            }
-
-            if (tabId === 'read' || tabId === 'inbox') {
-                loadEntries(); // Aktualisieren beim Tab-Wechsel
-            }
-        }
-
-        // Hilfsfunktion: Formular in den Normalzustand zurückversetzen
+        // Hilfsfunktion: Formular zurücksetzen
         function resetForm() {
             form.reset();
             editingItemId = null;
-            document.getElementById('formTitle').innerText = 'Neuer Eintrag';
-            document.getElementById('submitBtn').innerText = 'Speichern';
+            selectedFormCategoryId = null;
+            selectFormCategory(null); // Standardmäßig auf Inbox zurücksetzen
+            document.getElementById('formTitle').innerText = 'Gedanke festhalten';
+            document.getElementById('submitBtn').innerText = 'Festhalten';
             document.getElementById('cancelBtn').style.display = 'none';
         }
 
-        // Funktion: Kategorie-Filter umschalten (im Finden-Tab)
+        // Steuert die Aktivierung der Quick-Chips im Formular
+        function selectFormCategory(categoryId) {
+            selectedFormCategoryId = categoryId;
+            const buttons = document.querySelectorAll('.category-chips button');
+            buttons.forEach(btn => {
+                const val = btn.getAttribute('data-val');
+                if ((categoryId === null && val === 'inbox') || (categoryId !== null && val == categoryId)) {
+                    btn.classList.remove('outline');
+                } else {
+                    btn.classList.add('outline');
+                }
+            });
+        }
+
+        // Steuert den Suchfilter für den Feed
         function filterCategory(categoryId) {
             currentFilterCategory = categoryId;
             
@@ -276,47 +276,56 @@
             renderEntries();
         }
 
-        // Funktion: Eintrag speichern (Erstellen ODER Bearbeiten)
+        // Eintrag speichern (Erstellen ODER Bearbeiten)
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const title = document.getElementById('title').value;
-            const categoryValue = document.getElementById('category').value;
-            const category_id = categoryValue ? parseInt(categoryValue) : null;
             const content = document.getElementById('content').value;
+            const category_id = selectedFormCategoryId;
 
             let response;
 
             if (editingItemId) {
+                // UPDATE (Titel wird im Backend anhand der 1. Zeile neu generiert)
                 response = await fetch(`/api/items/${editingItemId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, category_id, content })
+                    body: JSON.stringify({ title: "", content, category_id })
                 });
             } else {
+                // CREATE (Titelgenerierung erfolgt im Backend)
                 response = await fetch('/api/items', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, category_id, content })
+                    body: JSON.stringify({ title: "", content, category_id })
                 });
             }
 
             if (response.ok) {
                 resetForm();
-                showTab('read');
+                loadEntries();
             } else {
                 alert('Fehler beim Speichern');
             }
         });
 
-        // Funktion: Daten vom Server laden
+        // Daten vom Server laden
         async function loadEntries() {
             try {
                 const response = await fetch('/api/items');
                 allItems = await response.json();
                 
-                // Filtern nach echten Inbox-Items (Kategorie ist null oder undefined)
+                // Filtern nach Inbox-Einträgen (category_id ist null)
                 inboxItems = allItems.filter(item => item.category_id === null || item.category_id === undefined);
-                document.getElementById('inboxBadgeCount').innerText = inboxItems.length;
+                
+                // Banner steuern
+                const banner = document.getElementById('inboxCollapseSection');
+                document.getElementById('inboxCountText').innerText = inboxItems.length;
+                
+                if (inboxItems.length > 0) {
+                    banner.style.display = 'block';
+                } else {
+                    banner.style.display = 'none';
+                }
 
                 renderEntries();
                 renderInboxCarousel();
@@ -326,19 +335,23 @@
         }
 
         // ==========================================
-        // INBOX KARUSSELL LOGIK (Variante B)
+        // DYNAMISCHES KARUSSELL
         // ==========================================
 
+        function toggleInboxCarousel() {
+            showInboxCarousel = !showInboxCarousel;
+            const wrapper = document.getElementById('inboxCarouselWrapper');
+            const arrow = document.getElementById('inboxToggleArrow');
+            wrapper.style.display = showInboxCarousel ? 'block' : 'none';
+            arrow.innerText = showInboxCarousel ? '▲' : '▼';
+        }
+
         function renderInboxCarousel() {
-            const container = document.getElementById('inboxContent');
+            const container = document.getElementById('inboxCarouselWrapper');
+            const wrapper = document.getElementById('inboxCarouselWrapper');
+            wrapper.style.display = showInboxCarousel ? 'block' : 'none';
 
             if (inboxItems.length === 0) {
-                container.innerHTML = `
-                    <article style="text-align: center; padding: 2rem;">
-                        <h3>🎉 Inbox vollkommen leer!</h3>
-                        <p style="color: gray;">Alle Notizen & Telegram-Nachrichten sind einsortiert.</p>
-                    </article>
-                `;
                 return;
             }
 
@@ -350,9 +363,9 @@
 
             container.innerHTML = `
                 <div class="inbox-nav">
-                    <button class="outline secondary" onclick="prevInboxCard()" ${currentInboxIndex === 0 ? 'disabled' : ''}>◀ Vorherige</button>
+                    <button type="button" class="outline secondary" onclick="prevInboxCard()" ${currentInboxIndex === 0 ? 'disabled' : ''}>◀ Vorherige</button>
                     <span style="font-size: 0.85rem; color: gray;">Eintrag ${currentInboxIndex + 1} von ${inboxItems.length}</span>
-                    <button class="outline secondary" onclick="nextInboxCard()" ${currentInboxIndex === inboxItems.length - 1 ? 'disabled' : ''}>Nächste ▶</button>
+                    <button type="button" class="outline secondary" onclick="nextInboxCard()" ${currentInboxIndex === inboxItems.length - 1 ? 'disabled' : ''}>Nächste ▶</button>
                 </div>
 
                 <div class="inbox-card">
@@ -365,7 +378,7 @@
                     </div>
                 </div>
 
-                <p style="font-size: 0.85rem; margin-bottom: 0.5rem; text-align: center;">Einsortieren in Kategorie:</p>
+                <p style="font-size: 0.85rem; margin-bottom: 0.5rem; text-align: center;">Schnell-Einsortieren:</p>
                 <div class="inbox-actions">
                     <button onclick="quickAssignCategory(${item.id}, 1)" class="secondary">Pläne</button>
                     <button onclick="quickAssignCategory(${item.id}, 2)" class="secondary">Organisation</button>
@@ -390,19 +403,18 @@
             }
         }
 
-        // Schnell-Zuweisung aus dem Karussell
         async function quickAssignCategory(itemId, newCategoryId) {
             try {
                 const response = await fetch(`/api/items/${itemId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ category_id: newCategoryId })
+                    body: JSON.stringify({ title: "", category_id: newCategoryId }) // Titel wird bei Bedarf neu generiert
                 });
 
                 if (response.ok) {
-                    loadEntries(); // Neu laden und UI aktualisieren
+                    loadEntries();
                 } else {
-                    alert('Fehler beim Zuweisen der Kategorie.');
+                    alert('Fehler beim Einsortieren.');
                 }
             } catch (err) {
                 alert('Netzwerkfehler.');
@@ -410,7 +422,7 @@
         }
 
         // ==========================================
-        // LISTE & EDITIEREN
+        // EDITIEREN & LÖSCHEN
         // ==========================================
 
         async function deleteItem(id, isFromCarousel = false) {
@@ -422,7 +434,7 @@
                 });
                 if (response.ok) {
                     if (isFromCarousel && currentInboxIndex > 0) {
-                        currentInboxIndex--; // Index verschieben, damit die UI nicht ins Leere greift
+                        currentInboxIndex--;
                     }
                     loadEntries();
                 } else {
@@ -437,17 +449,19 @@
             const item = allItems.find(i => i.id === id);
             if (!item) return;
 
-            document.getElementById('title').value = item.title;
-            document.getElementById('category').value = item.category_id !== null ? item.category_id : '';
+            // Formular befüllen
             document.getElementById('content').value = item.content || '';
+            selectFormCategory(item.category_id);
 
             editingItemId = id;
 
+            // UI anpassen
             document.getElementById('formTitle').innerText = 'Eintrag bearbeiten';
-            document.getElementById('submitBtn').innerText = 'Änderung speichern';
+            document.getElementById('submitBtn').innerText = 'Änderungen speichern';
             document.getElementById('cancelBtn').style.display = 'block';
 
-            showTab('write');
+            // Sanft nach oben zum Formular scrollen
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function renderEntries() {
@@ -493,7 +507,8 @@
             `).join('');
         }
 
-        // Beim Starten direkt einmal laden
+        // Initialisierung beim Laden der Seite
+        selectFormCategory(null); // Standardmäßig Inbox vorauswählen
         loadEntries();
     </script>
 </body>
