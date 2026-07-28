@@ -19,7 +19,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // HILFSFUNKTIONEN
 // ==========================================
 
-// Extrahiert die erste Zeile des Inhalts, kürzt sie auf max. 40 Zeichen und nutzt sie als Titel
+// Extrahiert die erste Zeile des Inhalts, kürzt sie auf max. 40 Zeichen und nutzt sie als Titel [1]
 function generateTitleFromContent(content) {
     if (!content || typeof content !== 'string') return 'Unbenannter Eintrag';
     const firstLine = content.split('\n')[0].trim();
@@ -65,7 +65,7 @@ app.post('/api/telegram-webhook', async (req, res) => {
         }
 
         try {
-            // Titel automatisch aus der ersten Zeile generieren
+            // Titel automatisch aus der ersten Zeile generieren [1]
             const title = generateTitleFromContent(text);
 
             // Eintrag in Supabase speichern (Kategorie null = Inbox)
@@ -99,7 +99,7 @@ app.post('/api/telegram-webhook', async (req, res) => {
 app.post('/api/items', async (req, res) => {
     const { title, content, category_id } = req.body;
 
-    // Nutzen des übergebenen Titels, andernfalls automatische Generierung aus der 1. Zeile
+    // Nutzen des übergebenen Titels, andernfalls automatische Generierung aus der 1. Zeile [1]
     const finalTitle = (title && String(title).trim() !== '') 
         ? String(title) 
         : generateTitleFromContent(content);
@@ -162,7 +162,7 @@ app.put('/api/items/:id', async (req, res) => {
 
         if (content !== undefined) updateData.content = String(content);
         
-        // Titel neu generieren, wenn explizit ein leerer Titel übermittelt wird (beim Bearbeiten im Frontend)
+        // Titel neu generieren, wenn explizit ein leerer Titel übermittelt wird [1]
         if (title !== undefined) {
             updateData.title = (String(title).trim() !== '') 
                 ? String(title) 
