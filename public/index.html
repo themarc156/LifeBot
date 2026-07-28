@@ -144,6 +144,9 @@
             <ul>
                 <li><strong>LifeBot 🤖</strong></li>
             </ul>
+            <ul>
+                <li id="currentDate" style="font-size: 0.85rem; color: gray;"></li>
+            </ul>
         </nav>
 
         <!-- DYNAMISCHES INBOX KARUSSELL BANNER -->
@@ -525,9 +528,16 @@
             `).join('');
         }
 
+        // Zeigt das aktuelle Datum im Header an (z. B. "Dienstag, 28. Juli 2026")
+        function updateHeaderDate() {
+            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            document.getElementById('currentDate').innerText = new Date().toLocaleDateString('de-DE', options);
+        }
+
         // Initialisierung beim Laden der Seite
         resetForm();
         loadEntries();
+        updateHeaderDate();
     </script>
 </body>
 </html>
