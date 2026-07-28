@@ -150,7 +150,7 @@
         <section id="inboxCollapseSection" style="display: none; border: 2px solid #00895b; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; background-color: #1a232a;">
             <div style="font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;" onclick="toggleInboxCarousel()">
                 <span>📥 Inbox aufräumen (<span id="inboxCountText">0</span>)</span>
-                <span id="inboxToggleArrow" style="font-size: 1.2rem;">▲</span>
+                <span id="inboxToggleArrow" style="font-size: 1.2rem;">▼</span>
             </div>
             <div id="inboxCarouselWrapper">
                 <!-- Wird dynamisch befüllt -->
@@ -211,7 +211,7 @@
         
         let selectedFormCategoryId = null; // Ausgewählte Kategorie im Quick-Add-Formular (null = Inbox)
         let editingItemId = null; // ID des Eintrags im Bearbeitungsmodus
-        let showInboxCarousel = true; // Karussell standardmäßig ausgeklappt, wenn Einträge da sind
+        let showInboxCarousel = false; // Karussell standardmäßig eingeklappt
 
         // Hilfsfunktion: Formular zurücksetzen
         function resetForm() {
