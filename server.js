@@ -19,12 +19,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 // HILFSFUNKTIONEN
 // ==========================================
 
-// Extrahiert die erste Zeile des Inhalts, kürzt sie auf max. 40 Zeichen und nutzt sie als Titel [1]
+// Sucht nach der ersten nicht-leeren Zeile des Inhalts, kürzt sie auf max. 40 Zeichen und nutzt sie als Titel [1]
 function generateTitleFromContent(content) {
     if (!content || typeof content !== 'string') return 'Unbenannter Eintrag';
-    const firstLine = content.split('\n')[0].trim();
-    if (!firstLine) return 'Unbenannter Eintrag';
-    return firstLine.length > 40 ? firstLine.substring(0, 40) + '...' : firstLine;
+    
+    // In Zeilen aufteilen, jede Zeile trimmen und die erste nicht-leere Zeile finden
+    const lines = content.split('\n');
+    const firstNonEmptyLine = lines.map(line => line.trim()).find(line => line.length > 0);
+    
+    if (!firstNonEmptyLine) return 'Unbenannter Eintrag';
+    return firstNonEmptyLine.length > 40 ? firstNonEmptyLine.substring(0, 40) + '...' : firstNonEmptyLine;
 }
 
 // ==========================================
@@ -162,11 +166,18 @@ app.put('/api/items/:id', async (req, res) => {
 
         if (content !== undefined) updateData.content = String(content);
         
-        // Titel neu generieren, wenn explizit ein leerer Titel übermittelt wird [1]
+        // Titel-Logik absichern, um ungewolltes Überschreiben zu verhindern [1]
         if (title !== undefined) {
-            updateData.title = (String(title).trim() !== '') 
-                ? String(title) 
-                : generateTitleFromContent(content || '');
+            const trimmedTitle = String(title).trim();
+            if (trimmedTitle !== '') {
+                updateData.title = trimmedTitle;
+            } else if (content !== undefined) {
+                // Nur neu generieren, wenn auch Inhalt vorhanden ist
+                updateData.title = generateTitleFromContent(content);
+            }
+        } else if (content !== undefined) {
+            // Falls kein Titel-Parameter geschickt wird, aber neuer Inhalt da ist, Titel ebenfalls aktualisieren [1]
+            updateData.title = generateTitleFromContent(content);
         }
         
         // Explizite Unterscheidung von null und undefined, damit die Zuweisung zur Inbox (null) klappt
