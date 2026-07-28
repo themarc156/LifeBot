@@ -5,7 +5,7 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Supabase-Zugangsdaten (In Produktion über Umgebungsverfahren setzen)
+// Supabase-Zugangsdaten (In Produktion über Umgebungsvariablen setzen)
 const SUPABASE_URL = process.env.SUPABASE_URL || 'DEINE_SUPABASE_URL';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || 'DEIN_SUPABASE_ANON_KEY';
 
@@ -14,6 +14,75 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ==========================================
+// TELEGRAM BOT INTEGRATION
+// ==========================================
+
+// Hilfsfunktion: Antwort-Nachricht zurück an Telegram senden
+async function sendTelegramMessage(chatId, text) {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) return;
+    
+    const url = `https://api.telegram.org/bot${token}/sendMessage`;
+    try {
+        await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, text: text })
+        });
+    } catch (err) {
+        console.error("Fehler beim Senden der Telegram-Nachricht:", err.message);
+    }
+}
+
+// Webhook-Endpunkt für eingehende Telegram-Nachrichten
+app.post('/api/telegram-webhook', async (req, res) => {
+    const update = req.body;
+
+    // Nur auf Textnachrichten reagieren
+    if (update.message && update.message.text) {
+        const text = update.message.text;
+        const chatId = update.message.chat.id;
+        const allowedChatId = process.env.TELEGRAM_ALLOWED_CHAT_ID;
+
+        // Sicherheitsprüfung: Nur Nachrichten von deiner erlaubten Chat-ID verarbeiten
+        if (allowedChatId && String(chatId) !== String(allowedChatId)) {
+            console.log(`Unbefugter Zugriff von Chat-ID: ${chatId}`);
+            return res.sendStatus(200); // 200 an Telegram senden, um weitere Versuche zu stoppen
+        }
+
+        try {
+            // Titel aus der ersten Zeile generieren (maximal 40 Zeichen)
+            const firstLine = text.split('\n')[0];
+            const title = firstLine.length > 40 ? firstLine.substring(0, 40) + '...' : firstLine;
+
+            // Eintrag in Supabase speichern (Kategorie 1 = Inbox/Pläne)
+            const { error } = await supabase
+                .from('items')
+                .insert([{
+                    title: title,
+                    content: text,
+                    category_id: 1
+                }]);
+
+            if (error) throw error;
+
+            // Erfolgsbestätigung an Telegram senden
+            await sendTelegramMessage(chatId, "📥 Erfolgreich im LifeBot gespeichert!");
+        } catch (err) {
+            console.error("Fehler im Telegram-Webhook:", err.message);
+            await sendTelegramMessage(chatId, "❌ Fehler beim Speichern im LifeBot.");
+        }
+    }
+
+    // Telegram erwartet als Bestätigung immer ein Status 200 OK
+    res.sendStatus(200);
+});
+
+// ==========================================
+// REST API ENDPUNKTE (Frontend / Dashboard)
+// ==========================================
 
 // API-Endpunkt: Neuen Eintrag speichern (Create)
 app.post('/api/items', async (req, res) => {
